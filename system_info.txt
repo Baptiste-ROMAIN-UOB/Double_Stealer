@@ -1,8 +1,0 @@
-Syst√®me d'exploitation : windows
-Version : Microsoft Windows [version 10.0.22631.4169]
-(c) Microsoft Corporation. Tous droits rÇservÇs.
-
-D:\Double_Stealer>
-Nombre de CPU : 16
-Architecture : amd64
-Nom d'h√¥te : DESKTOP-66J2SDQ

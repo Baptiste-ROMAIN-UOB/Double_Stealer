@@ -99,7 +99,7 @@ func GetDirectoriesForOS() []string {
 }
 
 // WriteSystemInfoToFile écrit les informations système dans un fichier
-func WriteSystemInfoToFile(filename string) error {
+func WriteSystemInfoToFile(filepath string) error {
 	osName, version := DetectOSAndVersion()
 
 	content := fmt.Sprintf("Système d'exploitation : %s\nVersion : %s\n", osName, version)
@@ -107,7 +107,7 @@ func WriteSystemInfoToFile(filename string) error {
 	content += fmt.Sprintf("Architecture : %s\n", runtime.GOARCH)
 	content += fmt.Sprintf("Nom d'hôte : %s\n", getHostname())
 
-	file, err := os.Create(filename)
+	file, err := os.Create(filepath)
 	if err != nil {
 		return fmt.Errorf("erreur lors de la création du fichier : %v", err)
 	}
