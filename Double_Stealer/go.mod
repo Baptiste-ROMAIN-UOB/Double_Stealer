@@ -1,0 +1,3 @@
+module DOUBLE_STEALER
+
+go 1.23.1
