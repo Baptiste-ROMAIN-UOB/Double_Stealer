@@ -13,4 +13,4 @@ go build -o myprogram_linux_arm
 set GOOS=linux
 set GOARCH=arm64
 go build -o myprogram_linux_arm64
-#.\build.sh
+#
