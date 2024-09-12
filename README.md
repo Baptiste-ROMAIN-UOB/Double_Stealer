@@ -17,7 +17,7 @@ Double Stealer est un projet de collecte de données sur pc selon différents sy
 
    \`\`\`
    git clone https://github.com/username/repository-name.git
-   \`\`\`
+   
    cd Double_Stealer
    \`\`\`
 
