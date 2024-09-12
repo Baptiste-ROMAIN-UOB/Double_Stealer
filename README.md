@@ -17,14 +17,15 @@ Double Stealer est un projet de collecte de données sur pc selon différents sy
 
    \`\`\`
    git clone https://github.com/username/repository-name.git
+   \`\`\`
    cd Double_Stealer
    \`\`\`
 
-2. **Installez les Dépendances**
+3. **Installez les Dépendances**
 
    Assurez-vous d'avoir Go installé sur votre machine. Vous pouvez obtenir Go depuis [golang.org](https://golang.org/).
 
-3. **Configurer les Listes d'Extensions et de Noms**
+4. **Configurer les Listes d'Extensions et de Noms**
 
    Les listes d'extensions et de noms pour la recherche de fichiers se trouvent dans le fichier \`main.go\`. Vous pouvez adapter ces listes selon vos besoins :
 
@@ -40,7 +41,7 @@ Double Stealer est un projet de collecte de données sur pc selon différents sy
 		"Sécurité", "sécurité", "Security", "security", "note"}
    \`\`\`
 
-4. **A rajouter**
+5. **A rajouter**
 
    System Information
 
