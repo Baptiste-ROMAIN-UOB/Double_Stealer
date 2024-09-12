@@ -2,6 +2,7 @@ package getos
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
@@ -106,6 +107,10 @@ func WriteSystemInfoToFile(filepath string) error {
 	content += fmt.Sprintf("Nombre de CPU : %d\n", runtime.NumCPU())
 	content += fmt.Sprintf("Architecture : %s\n", runtime.GOARCH)
 	content += fmt.Sprintf("Nom d'hôte : %s\n", getHostname())
+	content += fmt.Sprintf("Utilisateur : %s\n", getUser())
+	content += fmt.Sprintf("Disque : %s\n", getDiskInfo())
+	content += fmt.Sprintf("Réseau : %s\n", getNetworkInfo())
+	content += fmt.Sprintf("IP : %s\n", getIPInfo())
 
 	file, err := os.Create(filepath)
 	if err != nil {
@@ -128,4 +133,50 @@ func getHostname() string {
 		return "Inconnu"
 	}
 	return hostname
+}
+
+// Fonction pour obtenir l'utilisateur actuel
+func getUser() string {
+	user, err := user.Current()
+	if err != nil {
+		return "Inconnu"
+	}
+	return user.Username
+}
+
+// Fonction pour obtenir les informations sur le disque
+func getDiskInfo() string {
+	var result strings.Builder
+	cmd := exec.Command("df", "-h")
+	output, err := cmd.Output()
+	if err != nil {
+		return "Erreur lors de la récupération des informations sur le disque"
+	}
+	result.Write(output)
+	return result.String()
+}
+
+// Fonction pour obtenir les informations réseau
+func getNetworkInfo() string {
+	var result strings.Builder
+	cmd := exec.Command("ifconfig")
+	output, err := cmd.Output()
+	if err != nil {
+		return "Erreur lors de la récupération des informations réseau"
+	}
+	result.Write(output)
+	return result.String()
+}
+
+// Fonction pour obtenir les informations IP
+func getIPInfo() string {
+	var result strings.Builder
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "Erreur lors de la récupération des informations IP"
+	}
+	for _, addr := range addrs {
+		result.WriteString(addr.String() + "\n")
+	}
+	return result.String()
 }
