@@ -32,10 +32,10 @@ func DecodeBadges(badgeFlags int) []string {
 
 // Fonction pour récupérer les informations de l'utilisateur
 func GetUserInfo() (*UserInfo, error) {
-	// Récupérer le token depuis une variable d'environnement
+	// Récupérer le token depuis une variable d'environnement ou un paramètre
 	token := os.Getenv("DISCORD_BOT_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf("le token Discord n'est pas défini dans les variables d'environnement")
+		return nil, fmt.Errorf("no token given please set your discord bot token")
 	}
 
 	req, err := http.NewRequest("GET", "https://discord.com/api/v10/users/@me", nil)
