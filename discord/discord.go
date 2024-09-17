@@ -1,7 +1,6 @@
 package discord
 
 import (
-	//"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,50 +8,27 @@ import (
 	"os"
 )
 
-func SaveDiscordInfo(filename string) error {
-	// Récupérer les informations de l'utilisateur Discord
-	userInfo, err := GetUserInfo()
-	if err != nil {
-		return fmt.Errorf("erreur lors de la récupération des informations Discord : %v", err)
-	}
-
-	// Créer/ouvrir le fichier discord.txt
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("erreur lors de la création du fichier : %v", err)
-	}
-	defer file.Close()
-
-	// Écrire les informations dans le fichier
-	_, err = file.WriteString(fmt.Sprintf("Nitro: %t\n", userInfo.Nitro))
-	if err != nil {
-		return fmt.Errorf("erreur lors de l'écriture des informations : %v", err)
-	}
-
-	_, err = file.WriteString(fmt.Sprintf("Badges: %v\n", userInfo.Badges))
-	if err != nil {
-		return fmt.Errorf("erreur lors de l'écriture des badges : %v", err)
-	}
-
-	return nil
-}
-
 // Structure pour les informations de l'utilisateur
 type UserInfo struct {
-	Nitro  bool     `json:"premium_type"`
-	Badges []string `json:"public_flags"`
-	// Ajouter d'autres champs si nécessaire
+	PremiumType int `json:"premium_type"` // Changer de bool à int
+	Badges      int `json:"public_flags"` // Garder en int
 }
 
-// Structure pour la réponse API de Discord
-type DiscordResponse struct {
-	// Champs pour les informations de Discord
-	Email string `json:"email"`
-	Phone string `json:"phone"`
+// Fonction pour décoder les badges à partir d'un bitmask
+func DecodeBadges(badgeFlags int) []string {
+	var badges []string
+	if badgeFlags&1 != 0 {
+		badges = append(badges, "Staff")
+	}
+	if badgeFlags&2 != 0 {
+		badges = append(badges, "Partner")
+	}
+	if badgeFlags&4 != 0 {
+		badges = append(badges, "HypeSquad Events")
+	}
+	// Ajouter d'autres badges en fonction de leur bitmask respectif
+	return badges
 }
-
-// Token d'authentification pour l'API Discord
-const token = "MTI4MzgwNzIxNjkyNjg1MTA5Mg.G4A2QZ.uwKX53l0chuOe92fNHnPdCTluRDe9y5hxJlgtc"
 
 // Fonction pour récupérer les informations de l'utilisateur
 func GetUserInfo() (*UserInfo, error) {
@@ -83,6 +59,57 @@ func GetUserInfo() (*UserInfo, error) {
 	return &userInfo, nil
 }
 
+// Fonction pour créer un fichier vide s'il n'existe pas
+func CreateEmptyFile(filename string) error {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("erreur lors de la création du fichier : %v", err)
+		}
+		defer file.Close()
+	}
+	return nil
+}
+
+// Fonction pour enregistrer les informations Discord dans un fichier
+func SaveDiscordInfo(filename string) error {
+	// Créer le fichier vide au besoin
+	err := CreateEmptyFile(filename)
+	if err != nil {
+		return fmt.Errorf("erreur lors de la création du fichier : %v", err)
+	}
+
+	// Récupérer les informations de l'utilisateur Discord
+	userInfo, err := GetUserInfo()
+	if err != nil {
+		return fmt.Errorf("erreur lors de la récupération des informations Discord : %v", err)
+	}
+
+	// Décoder les badges
+	badges := DecodeBadges(userInfo.Badges)
+
+	// Ouvrir le fichier discord.txt pour écriture
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return fmt.Errorf("erreur lors de l'ouverture du fichier : %v", err)
+	}
+	defer file.Close()
+
+	// Écrire les informations dans le fichier
+	_, err = file.WriteString(fmt.Sprintf("Nitro: %d\n", userInfo.PremiumType)) // Utiliser int
+	if err != nil {
+		return fmt.Errorf("erreur lors de l'écriture des informations : %v", err)
+	}
+
+	_, err = file.WriteString(fmt.Sprintf("Badges: %v\n", badges))
+	if err != nil {
+		return fmt.Errorf("erreur lors de l'écriture des badges : %v", err)
+	}
+
+	return nil
+}
+
 // Fonction pour obtenir des informations sur les badges
 func GetBadges() ([]string, error) {
 	// Pour simplifier, cette fonction suppose que les badges sont retournés dans la structure UserInfo
@@ -91,7 +118,7 @@ func GetBadges() ([]string, error) {
 		return nil, err
 	}
 
-	return info.Badges, nil
+	return DecodeBadges(info.Badges), nil
 }
 
 // Fonction pour obtenir des informations sur le Billing
@@ -127,3 +154,6 @@ func GetHQFriends() ([]string, error) {
 	// Cette fonction doit être adaptée en fonction de vos besoins spécifiques.
 	return []string{"Non disponible via API publique"}, nil
 }
+
+// Token d'authentification pour l'API Discord
+const token = "MTI4MzgwNzIxNjkyNjg1MTA5Mg.G4A2QZ.uwKX53l0chuOe92fNHnPdCTluRDe9y5hxJlgtc"
