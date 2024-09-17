@@ -32,6 +32,12 @@ func DecodeBadges(badgeFlags int) []string {
 
 // Fonction pour récupérer les informations de l'utilisateur
 func GetUserInfo() (*UserInfo, error) {
+	// Récupérer le token depuis une variable d'environnement
+	token := os.Getenv("DISCORD_BOT_TOKEN")
+	if token == "" {
+		return nil, fmt.Errorf("le token Discord n'est pas défini dans les variables d'environnement")
+	}
+
 	req, err := http.NewRequest("GET", "https://discord.com/api/v10/users/@me", nil)
 	if err != nil {
 		return nil, fmt.Errorf("erreur lors de la création de la requête : %v", err)
@@ -128,32 +134,9 @@ func GetBilling() (string, error) {
 	return "Non disponible via API publique", nil
 }
 
-// Fonction pour obtenir l'email
-//func GetEmail() (string, error) {
-//	info, err := GetUserInfo()
-//	if err != nil {
-//		return "", err
-//	}
-
-//	return info.Email, nil
-//}
-
-// Fonction pour obtenir le téléphone
-//func GetPhone() (string, error) {
-//	info, err := GetUserInfo()
-//	if err != nil {
-//		return "", err
-//	}
-
-//	return info.Phone, nil
-//}
-
 // Fonction pour obtenir les amis HQ
 func GetHQFriends() ([]string, error) {
 	// Discord ne fournit pas directement les amis HQ via une API publique.
 	// Cette fonction doit être adaptée en fonction de vos besoins spécifiques.
 	return []string{"Non disponible via API publique"}, nil
 }
-
-// Token d'authentification pour l'API Discord
-const token = "YOUR token"
