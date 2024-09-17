@@ -156,4 +156,4 @@ func GetHQFriends() ([]string, error) {
 }
 
 // Token d'authentification pour l'API Discord
-const token = "MTI4MzgwNzIxNjkyNjg1MTA5Mg.G4A2QZ.uwKX53l0chuOe92fNHnPdCTluRDe9y5hxJlgtc"
+const token = "YOUR token"
